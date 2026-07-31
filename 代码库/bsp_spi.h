@@ -34,16 +34,11 @@ bool BspSpi_Transfer(bsp_spi_t *spi,
                      uint8_t *rx,
                      uint16_t length);
 
-/*
- * Transfer bytes without changing CS. The SPI peripheral must be configured
- * for 8-bit data frames when this interface is used.
- */
 bool BspSpi_TransferBytes(bsp_spi_t *spi,
                           const uint8_t *tx,
                           uint8_t *rx,
                           uint16_t length);
 
-/* Start an 8-bit full-duplex DMA transfer without changing CS. */
 bool BspSpi_TransferDma(bsp_spi_t *spi,
                         const uint8_t *tx,
                         uint8_t *rx,

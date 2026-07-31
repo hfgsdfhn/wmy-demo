@@ -10,9 +10,16 @@
  */
 #include "Bsp_Can.h"
 
-//根据编译器宏选择CAN驱动
+// Automatically select the CAN peripheral available on the target device.
 #if !defined(BSP_CAN_BACKEND_FDCAN) && !defined(BSP_CAN_BACKEND_BXCAN)
+#include "main.h"
+#if defined(FDCAN1) || defined(FDCAN2)
+#define BSP_CAN_BACKEND_FDCAN  1U
+#elif defined(CAN1) || defined(CAN2)
 #define BSP_CAN_BACKEND_BXCAN  1U
+#else
+#error "No supported CAN peripheral found. Define BSP_CAN_BACKEND_FDCAN or BSP_CAN_BACKEND_BXCAN."
+#endif
 #endif
 #if defined(BSP_CAN_BACKEND_FDCAN) && (BSP_CAN_BACKEND_FDCAN != 0U)
 #include "fdcan.h"
