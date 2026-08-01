@@ -53,7 +53,7 @@ bool Bsp_Uart_Init(bsp_uart_t *uart,
 {
     if ((uart == NULL) || (huart == NULL)
         || (tx_mode > BSP_UART_TX_DMA)
-        || ((rx_buf != NULL) && ((rx_size == 0U) || (rx_callback == NULL)))
+        || ((rx_buf != NULL) && (rx_size == 0U))
         || (instance_index >= BSP_UART_MAX_INSTANCES)
         || (uart_instances[instance_index] != NULL))
     {
