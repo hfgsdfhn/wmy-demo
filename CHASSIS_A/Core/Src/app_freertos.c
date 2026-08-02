@@ -691,18 +691,6 @@ void AppFreertos_Panic(app_freertos_fault_t fault)
     }
 }
 
-void vApplicationMallocFailedHook(void)
-{
-    AppFreertos_Panic(APP_FREERTOS_FAULT_MALLOC_FAILED);
-}
-
-void vApplicationStackOverflowHook(TaskHandle_t task, char *task_name)
-{
-    (void)task;
-    appFreertosFaultFile = task_name;
-    AppFreertos_Panic(APP_FREERTOS_FAULT_STACK_OVERFLOW);
-}
-
 __weak void App_OnCanFrame(const app_can_frame_t *frame)
 {
     (void)frame;

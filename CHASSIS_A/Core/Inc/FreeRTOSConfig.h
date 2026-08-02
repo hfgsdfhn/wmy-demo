@@ -49,7 +49,7 @@ void App_FreertosAssert(const char *file, uint32_t line);
 /* USER CODE END Includes */
 
 /* Ensure definitions are only used by the compiler, and not by the assembler. */
-#if defined(__ICCARM__) || defined(__CC_ARM) || defined(__GNUC__)
+#if defined(__ICCARM__) || defined(__CC_ARM) || defined(__GNUC__) || defined(__clang__)
 #include <stdint.h>
 extern uint32_t SystemCoreClock;
 #endif

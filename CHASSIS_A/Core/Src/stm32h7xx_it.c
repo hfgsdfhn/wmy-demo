@@ -221,19 +221,4 @@ void FDCAN3_IT0_IRQHandler(void)
 
 /* USER CODE BEGIN 1 */
 
-void FDCAN1_IT0_IRQHandler(void)
-{
-  HAL_FDCAN_IRQHandler(&hfdcan1);
-}
-
-void FDCAN2_IT0_IRQHandler(void)
-{
-  HAL_FDCAN_IRQHandler(&hfdcan2);
-}
-
-void FDCAN3_IT0_IRQHandler(void)
-{
-  HAL_FDCAN_IRQHandler(&hfdcan3);
-}
-
 /* USER CODE END 1 */
