@@ -9,7 +9,6 @@
  * 
  */
 #include "PID.h"
-#include "bsp_control_timer.h"
 /**
  * @brief 取绝对值函数
  * 
@@ -125,4 +124,3 @@ float PID_Calc(pid_t *pid, float target, float feedback)
     pid->initialized = true;     //上一次返回值有效
     return PID_Clamp(output, pid->output_limit);        //限幅并输出
 }
-

@@ -13,8 +13,11 @@ typedef struct bsp_can bsp_can_t;
 
 typedef void (*bsp_can_rx_callback_t)(bsp_can_t *can,
                                       uint32_t can_id,
+                                      bool is_extended_id,
                                       const uint8_t *data,
                                       uint8_t length);
+typedef void (*bsp_can_error_callback_t)(bsp_can_t *can,
+                                         uint32_t error_flags);
 
 /**
  * @brief CAN实例结构体
@@ -24,11 +27,13 @@ struct bsp_can
     uint8_t instance_index;
     void *hal_handle;
     bsp_can_rx_callback_t rx_callback;
+    bsp_can_error_callback_t error_callback;
     bool initialized;
 };
 
 bool BspCan_Init(bsp_can_t *can, void *hal_handle, uint8_t instance_index,
-                 bsp_can_rx_callback_t callback);
+                 bsp_can_rx_callback_t rx_callback,
+                 bsp_can_error_callback_t error_callback);
 bool BspCan_Process(bsp_can_t *can);
 bool BspCan_Send(bsp_can_t *can, uint32_t can_id,
                  const uint8_t *data, uint8_t length);

@@ -45,7 +45,7 @@
 /* USER CODE BEGIN Includes */
 /* Section where include file can be added */
 #include <stdint.h>
-void App_FreertosAssert(const char *file, uint32_t line);
+void AppRtos_Assert(const char *file, uint32_t line);
 /* USER CODE END Includes */
 
 /* Ensure definitions are only used by the compiler, and not by the assembler. */
@@ -158,7 +158,7 @@ See http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html. */
 header file. */
 /* USER CODE BEGIN 1 */
 #define configASSERT( x ) do { if ((x) == 0) { \
-    App_FreertosAssert(__FILE__, (uint32_t)__LINE__); } } while (0)
+    AppRtos_Assert(__FILE__, (uint32_t)__LINE__); } } while (0)
 /* USER CODE END 1 */
 
 /* Definitions that map the FreeRTOS port interrupt handlers to their CMSIS

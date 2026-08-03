@@ -49,5 +49,7 @@ chassis_a/freertos.o: ..\Core\Src\freertos.c \
   ..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_ll_usb.h \
   ..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_pcd_ex.h \
   ..\Drivers\STM32H7xx_HAL_Driver\Inc\stm32h7xx_hal_hcd.h \
-  ..\Drivers\CMSIS\RTOS2\Include\cmsis_os2.h ..\Core\Inc\app_freertos.h \
-  D:\keil5ARM\Core\ARM\ARMCLANG\Bin\..\include\stdbool.h
+  ..\Drivers\CMSIS\RTOS2\Include\cmsis_os2.h \
+  ..\user_code\RTOS\app_rtos.h \
+  D:\keil5ARM\Core\ARM\ARMCLANG\Bin\..\include\stdbool.h \
+  ..\user_code\App\app_messages.h ..\user_code\App\app_state.h

@@ -26,7 +26,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "app_freertos.h"
+#include "app_rtos.h"
 
 /* USER CODE END Includes */
 
@@ -74,15 +74,15 @@ void vApplicationMallocFailedHook(void);
 void vApplicationStackOverflowHook(xTaskHandle xTask, char *pcTaskName)
 {
   (void)xTask;
-  appFreertosFaultFile = pcTaskName;
-  AppFreertos_Panic(APP_FREERTOS_FAULT_STACK_OVERFLOW);
+  appRtosFaultFile = pcTaskName;
+  AppRtos_Panic(APP_RTOS_FAULT_STACK_OVERFLOW);
 }
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN 5 */
 void vApplicationMallocFailedHook(void)
 {
-  AppFreertos_Panic(APP_FREERTOS_FAULT_MALLOC_FAILED);
+  AppRtos_Panic(APP_RTOS_FAULT_MALLOC_FAILED);
 }
 /* USER CODE END 5 */
 
@@ -93,9 +93,9 @@ void vApplicationMallocFailedHook(void)
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
-  if (!AppFreertos_Init())
+  if (!AppRtos_Init())
   {
-    AppFreertos_Panic(APP_FREERTOS_FAULT_OBJECT_CREATE);
+    AppRtos_Panic(APP_RTOS_FAULT_OBJECT_CREATE);
   }
 
   /* USER CODE END Init */
@@ -141,7 +141,7 @@ void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
   (void)argument;
-  AppFreertos_Bootstrap();
+  AppRtos_Bootstrap();
   osThreadExit();
   /* USER CODE END StartDefaultTask */
 }

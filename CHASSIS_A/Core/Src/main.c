@@ -28,6 +28,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "Bsp_Control_Timer.h"
 
 /* USER CODE END Includes */
 
@@ -275,6 +276,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
+  BspTim_DispatchPeriodElapsedFromISR(htim);
 
   /* USER CODE END Callback 1 */
 }

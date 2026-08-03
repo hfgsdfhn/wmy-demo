@@ -39,6 +39,52 @@
 #if BSP_CAN_HAS_FDCAN
 static volatile bool can_recovery_requested[BSP_CAN_MAX_INSTANCES];
 
+static uint32_t BspCan_BytesToDlc(uint8_t length)
+{
+    static const uint32_t dlc_table[BSP_CAN_MAX_DATA_LENGTH + 1U] =
+    {
+        FDCAN_DLC_BYTES_0,
+        FDCAN_DLC_BYTES_1,
+        FDCAN_DLC_BYTES_2,
+        FDCAN_DLC_BYTES_3,
+        FDCAN_DLC_BYTES_4,
+        FDCAN_DLC_BYTES_5,
+        FDCAN_DLC_BYTES_6,
+        FDCAN_DLC_BYTES_7,
+        FDCAN_DLC_BYTES_8
+    };
+
+    return (length <= BSP_CAN_MAX_DATA_LENGTH) ? dlc_table[length]
+                                                : FDCAN_DLC_BYTES_0;
+}
+
+static uint8_t BspCan_DlcToBytes(uint32_t data_length)
+{
+    switch (data_length)
+    {
+    case FDCAN_DLC_BYTES_0:
+        return 0U;
+    case FDCAN_DLC_BYTES_1:
+        return 1U;
+    case FDCAN_DLC_BYTES_2:
+        return 2U;
+    case FDCAN_DLC_BYTES_3:
+        return 3U;
+    case FDCAN_DLC_BYTES_4:
+        return 4U;
+    case FDCAN_DLC_BYTES_5:
+        return 5U;
+    case FDCAN_DLC_BYTES_6:
+        return 6U;
+    case FDCAN_DLC_BYTES_7:
+        return 7U;
+    case FDCAN_DLC_BYTES_8:
+        return 8U;
+    default:
+        return 0U;
+    }
+}
+
 /// FDCAN驱动相关函数
 static FDCAN_HandleTypeDef *BspCan_Handle(const bsp_can_t *can)
 {
@@ -141,9 +187,10 @@ static bool BspCan_BxStartHardware(bsp_can_t *can)
  * @return false 
  */
 bool BspCan_Init(bsp_can_t *can, void *hal_handle, uint8_t instance_index,
-                 bsp_can_rx_callback_t callback)
+                 bsp_can_rx_callback_t rx_callback,
+                 bsp_can_error_callback_t error_callback)
 {
-    if ((can == 0) || (hal_handle == 0) || (callback == 0)
+    if ((can == 0) || (hal_handle == 0) || (rx_callback == 0)
         || (instance_index >= BSP_CAN_MAX_INSTANCES)
         || (can_instances[instance_index] != 0))
     {
@@ -152,7 +199,8 @@ bool BspCan_Init(bsp_can_t *can, void *hal_handle, uint8_t instance_index,
 
     can->instance_index = instance_index;
     can->hal_handle = hal_handle;
-    can->rx_callback = callback;
+    can->rx_callback = rx_callback;
+    can->error_callback = error_callback;
     can->initialized = false;
     can_instances[instance_index] = can;
 
@@ -161,6 +209,8 @@ bool BspCan_Init(bsp_can_t *can, void *hal_handle, uint8_t instance_index,
     {
         can_instances[instance_index] = 0;
         can->hal_handle = 0;
+        can->rx_callback = 0;
+        can->error_callback = 0;
         return false;
     }
     can->initialized = true;
@@ -171,6 +221,8 @@ bool BspCan_Init(bsp_can_t *can, void *hal_handle, uint8_t instance_index,
     {
         can_instances[instance_index] = 0;
         can->hal_handle = 0;
+        can->rx_callback = 0;
+        can->error_callback = 0;
         return false;
     }
     can->initialized = true;
@@ -178,6 +230,8 @@ bool BspCan_Init(bsp_can_t *can, void *hal_handle, uint8_t instance_index,
 #else
     can_instances[instance_index] = 0;
     can->hal_handle = 0;
+    can->rx_callback = 0;
+    can->error_callback = 0;
     return false;
 #endif
 }
@@ -246,7 +300,7 @@ bool BspCan_Send(bsp_can_t *can, uint32_t can_id,
     header.Identifier = can_id;
     header.IdType = FDCAN_STANDARD_ID;
     header.TxFrameType = FDCAN_DATA_FRAME;
-    header.DataLength = length;
+    header.DataLength = BspCan_BytesToDlc(length);
     header.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
     header.BitRateSwitch = FDCAN_BRS_OFF;
     header.FDFormat = FDCAN_CLASSIC_CAN;
@@ -296,7 +350,7 @@ bool BspCan_SendExtended(bsp_can_t *can, uint32_t can_id,
     header.Identifier = can_id;
     header.IdType = FDCAN_EXTENDED_ID;
     header.TxFrameType = FDCAN_DATA_FRAME;
-    header.DataLength = length;
+    header.DataLength = BspCan_BytesToDlc(length);
     header.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
     header.BitRateSwitch = FDCAN_BRS_OFF;
     header.FDFormat = FDCAN_CLASSIC_CAN;
@@ -368,7 +422,9 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *handle)
             {
                 header.StdId = header.ExtId;
             }
-            can->rx_callback(can, header.StdId, data, header.DLC);      //进入具体任务中断
+            can->rx_callback(can, header.StdId,
+                             header.IDE == CAN_ID_EXT,
+                             data, header.DLC);
         }
     }
 }
@@ -391,6 +447,11 @@ void HAL_FDCAN_ErrorStatusCallback(FDCAN_HandleTypeDef *handle,
             && (can_instances[index]->hal_handle == handle))
         {
             can_recovery_requested[index] = true;
+            if (can_instances[index]->error_callback != 0)
+            {
+                can_instances[index]->error_callback(can_instances[index],
+                                                       error_status_its);
+            }
             return;
         }
     }
@@ -437,8 +498,9 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *handle,
              || header.IdType == FDCAN_EXTENDED_ID)
             && (can->rx_callback != 0))
         {
-            can->rx_callback(can, header.Identifier, data,                   //进入具体任务中断
-                              (uint8_t)header.DataLength);
+            can->rx_callback(can, header.Identifier,
+                             header.IdType == FDCAN_EXTENDED_ID,
+                             data, BspCan_DlcToBytes(header.DataLength));
         }
     }
 }

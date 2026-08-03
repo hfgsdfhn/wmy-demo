@@ -49,4 +49,5 @@ chassis_a/main.o: ..\Core\Src\main.c ..\Core\Inc\main.h \
   ..\Middlewares\Third_Party\FreeRTOS\Source\include\mpu_wrappers.h \
   ..\Drivers\CMSIS\RTOS2\Include\cmsis_os2.h ..\Core\Inc\fdcan.h \
   ..\Core\Inc\tim.h ..\Core\Inc\usart.h ..\Core\Inc\usb_otg.h \
-  ..\Core\Inc\gpio.h
+  ..\Core\Inc\gpio.h ..\user_code\BSP\Bsp_Control_Timer.h \
+  D:\keil5ARM\Core\ARM\ARMCLANG\Bin\..\include\stdbool.h

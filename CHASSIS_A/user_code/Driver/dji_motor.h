@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "Bsp_Can.h"
+#include "bsp_can.h"
 
 #define DJI_MOTOR_FEEDBACK_ID_BASE  0x201U
 #define DJI_MOTOR_CONTROL_ID_1_4    0x200U

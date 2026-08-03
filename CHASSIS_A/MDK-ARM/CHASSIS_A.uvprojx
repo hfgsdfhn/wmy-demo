@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>USE_PWR_LDO_SUPPLY,USE_HAL_DRIVER,STM32H723xx</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1;../Drivers/CMSIS/RTOS2/Include;../Drivers/CMSIS/Device/ST/STM32H7xx/Include;../Drivers/CMSIS/Include</IncludePath>
+              <IncludePath>../Core/Inc;../user_code/App;../user_code/RTOS;../user_code/BSP;../user_code/Driver;../user_code/Algorithm;../user_code/Config;../Drivers/STM32H7xx_HAL_Driver/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1;../Drivers/CMSIS/RTOS2/Include;../Drivers/CMSIS/Device/ST/STM32H7xx/Include;../Drivers/CMSIS/Include</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -358,7 +358,7 @@
               <MiscControls></MiscControls>
               <Define></Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1;../Drivers/CMSIS/RTOS2/Include;../Drivers/CMSIS/Device/ST/STM32H7xx/Include;../Drivers/CMSIS/Include</IncludePath>
+              <IncludePath>../Core/Inc;../user_code/App;../user_code/RTOS;../user_code/BSP;../user_code/Driver;../user_code/Algorithm;../user_code/Config;../Drivers/STM32H7xx_HAL_Driver/Inc;../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1;../Drivers/CMSIS/RTOS2/Include;../Drivers/CMSIS/Device/ST/STM32H7xx/Include;../Drivers/CMSIS/Include</IncludePath>
             </VariousControls>
           </Aads>
           <LDads>
@@ -450,9 +450,144 @@
           <GroupName>Application/User/App</GroupName>
           <Files>
             <File>
-              <FileName>app_freertos.c</FileName>
+              <FileName>app_init.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../Core/Src/app_freertos.c</FilePath>
+              <FilePath>../user_code/App/app_init.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_chassis.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/App/app_chassis.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_climb.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/App/app_climb.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_navigation.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/App/app_navigation.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_sensors.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/App/app_sensors.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_communication.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/App/app_communication.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_can_router.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/App/app_can_router.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_safety.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/App/app_safety.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_monitor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/App/app_monitor.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_init.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../user_code/App/app_init.h</FilePath>
+            </File>
+            <File>
+              <FileName>app_messages.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../user_code/App/app_messages.h</FilePath>
+            </File>
+            <File>
+              <FileName>app_state.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../user_code/App/app_state.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Application/User/RTOS</GroupName>
+          <Files>
+            <File>
+              <FileName>app_rtos.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/RTOS/app_rtos.c</FilePath>
+            </File>
+            <File>
+              <FileName>task_control.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/RTOS/task_control.c</FilePath>
+            </File>
+            <File>
+              <FileName>task_io.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/RTOS/task_io.c</FilePath>
+            </File>
+            <File>
+              <FileName>task_navigation.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/RTOS/task_navigation.c</FilePath>
+            </File>
+            <File>
+              <FileName>task_supervision.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/RTOS/task_supervision.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Application/User/BSP</GroupName>
+          <Files>
+            <File>
+              <FileName>bsp_board.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/BSP/bsp_board.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_can.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/BSP/bsp_can.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_uart.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/BSP/bsp_uart.c</FilePath>
+            </File>
+            <File>
+              <FileName>Bsp_Control_Timer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/BSP/Bsp_Control_Timer.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Application/User/Driver</GroupName>
+          <Files>
+            <File>
+              <FileName>ak_motor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/Driver/ak_motor.c</FilePath>
+            </File>
+            <File>
+              <FileName>rs01_motor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/Driver/rs01_motor.c</FilePath>
+            </File>
+            <File>
+              <FileName>dji_motor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/Driver/dji_motor.c</FilePath>
+            </File>
+            <File>
+              <FileName>VOFA.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/Driver/VOFA.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -463,6 +598,31 @@
               <FileName>PathFollower.c</FileName>
               <FileType>1</FileType>
               <FilePath>../user_code/Algorithm/PathFollower.c</FilePath>
+            </File>
+            <File>
+              <FileName>PID.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/Algorithm/PID.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Application/User/Config</GroupName>
+          <Files>
+            <File>
+              <FileName>board_config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../user_code/Config/board_config.h</FilePath>
+            </File>
+            <File>
+              <FileName>control_config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../user_code/Config/control_config.h</FilePath>
+            </File>
+            <File>
+              <FileName>pid_config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>../user_code/Config/pid_config.h</FilePath>
             </File>
           </Files>
         </Group>

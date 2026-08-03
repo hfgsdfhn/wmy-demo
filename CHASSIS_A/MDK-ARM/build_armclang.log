@@ -2,7 +2,7 @@
 Build target 'CHASSIS_A'
 compiling app_freertos.c...
 linking...
-Program Size: Code=39796 RO-data=1916 RW-data=20 ZI-data=73996  
+Program Size: Code=40980 RO-data=2116 RW-data=20 ZI-data=74028  
 FromELF: creating hex file...
 "CHASSIS_A\CHASSIS_A.axf" - 0 Error(s), 0 Warning(s).
-Build Time Elapsed:  00:00:03
+Build Time Elapsed:  00:00:02
