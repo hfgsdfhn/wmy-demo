@@ -2,25 +2,23 @@
 
 #include <math.h>
 #include <stddef.h>
-#include <string.h>
 
-#define PATH_FOLLOWER_PI                 3.14f
-#define PATH_FOLLOWER_TWO_PI             (2.0f * PATH_FOLLOWER_PI)
-#define PATH_FOLLOWER_EPSILON            0.0001f
+#define PATH_TRACKER_PI        (3.14159265358979323846f)
+#define PATH_TRACKER_TWO_PI    (2.0f * PATH_TRACKER_PI)
 
 typedef struct
 {
-    float x;                     /* 最近投影点世界 x 坐标 */
-    float y;                     /* 最近投影点世界 y 坐标 */
-    float tangent_x;             /* 投影所在路径段的单位切线 x 分量 */
-    float tangent_y;             /* 投影所在路径段的单位切线 y 分量 */
-    float progress;              /* 投影点在线段内的比例，范围 [0, 1] */
-    float remaining_distance;    /* 从投影点到终点的路径弧长，单位 m */
-    uint16_t segment;            /* 投影所在路径段编号 */
-} path_follower_projection_t;
+    const PathPoint *path;
+    uint16_t size;
+    uint16_t nearest_index;
+    uint16_t target_index;
+    bool finished;
+    PathTrackerConfig config;
+} PathTrackerState;
 
-/* 将数值限制在区间内。 */
-static float PathFollower_Clamp(float value, float minimum, float maximum)
+static PathTrackerState g_path_tracker;
+
+static float PathTracker_Clamp(float value, float minimum, float maximum)
 {
     if (value < minimum)
     {
@@ -33,405 +31,266 @@ static float PathFollower_Clamp(float value, float minimum, float maximum)
     return value;
 }
 
-/* 将角度归一化到 [-pi, pi]，保证航向误差取最短转向方向。 */
-static float PathFollower_NormalizeAngle(float angle)
+/* 归一化到 [-pi, pi]，使车体始终选择最短 yaw 旋转方向。 */
+static float PathTracker_NormalizeAngle(float angle)
 {
-    while (angle > PATH_FOLLOWER_PI)
+    while (angle > PATH_TRACKER_PI)
     {
-        angle -= PATH_FOLLOWER_TWO_PI;
+        angle -= PATH_TRACKER_TWO_PI;
     }
-    while (angle < -PATH_FOLLOWER_PI)
+    while (angle < -PATH_TRACKER_PI)
     {
-        angle += PATH_FOLLOWER_TWO_PI;
+        angle += PATH_TRACKER_TWO_PI;
     }
     return angle;
 }
 
-/* 计算平面两点间的欧氏距离。 */
-static float PathFollower_Distance(float x0, float y0, float x1, float y1)
+static void PathTracker_WriteZero(float *vx_body, float *vy_body, float *omega)
 {
-    float dx = x1 - x0;
-    float dy = y1 - y0;
-
-    return sqrtf(dx * dx + dy * dy);
-}
-
-/* 计算相邻路径点构成线段的长度。 */
-static float PathFollower_SegmentLength(const path_follower_point_t *start,
-                                        const path_follower_point_t *end)
-{
-    return PathFollower_Distance(start->position_x_m, start->position_y_m,
-                                 end->position_x_m, end->position_y_m);
-}
-
-/* 初始化前检查所有会影响除零和限幅的参数。 */
-static bool PathFollower_IsConfigValid(const path_follower_config_t *config)
-{
-    return (config != NULL)
-        && (config->mode <= PATH_FOLLOWER_NONHOLONOMIC)
-        && (config->minimum_lookahead_m > 0.0f)
-        && (config->lookahead_time_s >= 0.0f)
-        && (config->cruise_speed_mps > 0.0f)
-        && (config->maximum_speed_mps > 0.0f)
-        && (config->maximum_yaw_rate_radps > 0.0f)
-        && (config->position_gain >= 0.0f)
-        && (config->heading_gain >= 0.0f)
-        && (config->maximum_deceleration_mps2 > 0.0f)
-        && (config->finish_distance_m > 0.0f)
-        && (config->finish_yaw_error_rad > 0.0f);
-}
-
-/* 从指定线段内的投影位置开始，累加到路径终点的弧长。 */
-static float PathFollower_RemainingDistance(const path_follower_t *follower,
-                                            uint16_t segment,
-                                            float segment_progress)
-{
-    float remaining;
-    uint16_t index;
-    float length;
-
-    length = PathFollower_SegmentLength(&follower->path[segment],
-                                        &follower->path[segment + 1U]);
-    remaining = (1.0f - segment_progress) * length;
-    for (index = (uint16_t)(segment + 1U);
-         index < (uint16_t)(follower->point_count - 1U); index++)
+    if (vx_body != NULL)
     {
-        remaining += PathFollower_SegmentLength(&follower->path[index],
-                                                &follower->path[index + 1U]);
+        *vx_body = 0.0f;
     }
-    return remaining;
+    if (vy_body != NULL)
+    {
+        *vy_body = 0.0f;
+    }
+    if (omega != NULL)
+    {
+        *omega = 0.0f;
+    }
 }
 
 /*
- * 在尚未经过的路径段中寻找离当前底盘最近的正交投影点。
- * current_segment 限制搜索起点，避免路径自交时跟踪进度跳回已走过的段。
+ * 位置误差已转换为 m，因此 PID 输出为 m/s。
+ * 对积分项限幅，避免速度饱和时积分继续累积造成冲出路径。
  */
-static void PathFollower_FindClosestProjection(
-    const path_follower_t *follower, const path_follower_pose_t *pose,
-    path_follower_projection_t *projection)
+static float PathTracker_PIDUpdate(PID_t *pid, float error, float dt_s)
+{
+    float derivative;
+    float output;
+    float integral_limit;
+
+    pid->integral += error * dt_s;
+    if (pid->ki != 0.0f)
+    {
+        integral_limit = (pid->output_limit > 0.0f)
+                       ? fabsf(pid->output_limit / pid->ki) : 100.0f;
+        pid->integral = PathTracker_Clamp(pid->integral,
+                                          -integral_limit, integral_limit);
+    }
+    derivative = (error - pid->last_error) / dt_s;
+    output = pid->kp * error + pid->ki * pid->integral + pid->kd * derivative;
+    pid->last_error = error;
+
+    if (pid->output_limit > 0.0f)
+    {
+        output = PathTracker_Clamp(output, -pid->output_limit, pid->output_limit);
+    }
+    return output;
+}
+
+/* 遍历每个路径点，按欧氏距离平方找出最近点，避免无意义的 sqrtf 开销。 */
+static uint16_t PathTracker_FindNearestIndex(float robot_x, float robot_y)
 {
     uint16_t index;
-    const path_follower_point_t *start;
-    const path_follower_point_t *end;
+    uint16_t nearest_index = 0U;
     float dx;
     float dy;
-    float length_squared;
-    float progress;
-    float x;
-    float y;
     float distance_squared;
     float minimum_distance_squared = 0.0f;
-    bool found = false;
 
-    for (index = follower->current_segment;
-         index < (uint16_t)(follower->point_count - 1U); index++)
+    for (index = 0U; index < g_path_tracker.size; index++)
     {
-        start = &follower->path[index];
-        end = &follower->path[index + 1U];
-        dx = end->position_x_m - start->position_x_m;
-        dy = end->position_y_m - start->position_y_m;
-        length_squared = dx * dx + dy * dy;
-        if (length_squared < PATH_FOLLOWER_EPSILON)
+        dx = robot_x - g_path_tracker.path[index].x;
+        dy = robot_y - g_path_tracker.path[index].y;
+        distance_squared = dx * dx + dy * dy;
+        if ((index == 0U) || (distance_squared < minimum_distance_squared))
         {
-            continue;
-        }
-
-        progress = ((pose->position_x_m - start->position_x_m) * dx
-                    + (pose->position_y_m - start->position_y_m) * dy)
-                 / length_squared;
-        progress = PathFollower_Clamp(progress, 0.0f, 1.0f);
-        x = start->position_x_m + progress * dx;
-        y = start->position_y_m + progress * dy;
-        distance_squared = (pose->position_x_m - x) * (pose->position_x_m - x)
-                         + (pose->position_y_m - y) * (pose->position_y_m - y);
-
-        if (!found || (distance_squared < minimum_distance_squared))
-        {
-            projection->x = x;
-            projection->y = y;
-            projection->tangent_x = dx / sqrtf(length_squared);
-            projection->tangent_y = dy / sqrtf(length_squared);
-            projection->progress = progress;
-            projection->segment = index;
             minimum_distance_squared = distance_squared;
-            found = true;
+            nearest_index = index;
         }
     }
-
-    if (!found)
-    {
-        projection->x = follower->path[follower->point_count - 1U].position_x_m;
-        projection->y = follower->path[follower->point_count - 1U].position_y_m;
-        projection->tangent_x = 1.0f;
-        projection->tangent_y = 0.0f;
-        projection->progress = 1.0f;
-        projection->segment = (uint16_t)(follower->point_count - 2U);
-    }
-    projection->remaining_distance = PathFollower_RemainingDistance(
-        follower, projection->segment, projection->progress);
+    return nearest_index;
 }
 
-/*
- * 从最近投影点开始沿路径弧长前进，得到动态前视点。
- * 前视距离超过剩余路径长度时，前视点固定为最终路径点。
- */
-
-static void PathFollower_FindLookaheadPoint(
-    const path_follower_t *follower, const path_follower_projection_t *projection,
-    float lookahead_distance, path_follower_point_t *target,
-    uint16_t *target_segment)
+/* 使用 s 选取前视目标，而非直接以最近点作为控制目标。 */
+static uint16_t PathTracker_FindTargetIndex(uint16_t nearest_index)
 {
-    uint16_t segment = projection->segment;
-    float progress = projection->progress;
-    float available_distance;
-    float segment_length;
-    float ratio;
-    const path_follower_point_t *start;
-    const path_follower_point_t *end;
+    uint16_t index;
+    float target_s = g_path_tracker.path[nearest_index].s
+                   + g_path_tracker.config.lookahead_distance_mm;
 
-    while (segment < (uint16_t)(follower->point_count - 1U))
+    for (index = nearest_index; index < g_path_tracker.size; index++)
     {
-        start = &follower->path[segment];
-        end = &follower->path[segment + 1U];
-        segment_length = PathFollower_SegmentLength(start, end);
-        if (segment_length < PATH_FOLLOWER_EPSILON)
+        if (g_path_tracker.path[index].s >= target_s)
         {
-            segment++;
-            progress = 0.0f;
-            continue;
+            return index;
         }
-
-        available_distance = (1.0f - progress) * segment_length;
-        if (lookahead_distance <= available_distance)
-        {
-            ratio = progress + lookahead_distance / segment_length;
-            target->position_x_m = start->position_x_m
-                                 + ratio * (end->position_x_m - start->position_x_m);
-            target->position_y_m = start->position_y_m
-                                 + ratio * (end->position_y_m - start->position_y_m);
-            target->yaw_rad = PathFollower_NormalizeAngle(start->yaw_rad
-                              + ratio * PathFollower_NormalizeAngle(end->yaw_rad
-                                                                     - start->yaw_rad));
-            target->target_speed_mps = start->target_speed_mps
-                                     + ratio * (end->target_speed_mps
-                                                - start->target_speed_mps);
-            *target_segment = segment;
-            return;
-        }
-
-        lookahead_distance -= available_distance;
-        segment++;
-        progress = 0.0f;
     }
-
-    *target = follower->path[follower->point_count - 1U];
-    *target_segment = (uint16_t)(follower->point_count - 2U);
+    return (uint16_t)(g_path_tracker.size - 1U);
 }
 
-/* 根据路径点速度和可用制动距离生成速度参考值。 */
-static float PathFollower_TargetSpeed(const path_follower_t *follower,
-                                      const path_follower_point_t *target,
-                                      float remaining_distance)
+void PathTracker_Init(void)
 {
-    float speed = target->target_speed_mps;
-    float braking_speed;
+    g_path_tracker.path = NULL;
+    g_path_tracker.size = 0U;
+    g_path_tracker.nearest_index = 0U;
+    g_path_tracker.target_index = 0U;
+    g_path_tracker.finished = false;
 
-    if (speed <= 0.0f)
+    /* 适合路径点间隔约 50 mm、100 Hz 初始调试的保守默认值。 */
+    g_path_tracker.config.lookahead_distance_mm = 400.0f;
+    g_path_tracker.config.max_linear_speed_mps = 1.0f;
+    g_path_tracker.config.max_angular_speed_radps = 2.0f;
+    g_path_tracker.config.yaw_kp = 3.0f;
+    g_path_tracker.config.finish_distance_mm = 50.0f;
+    g_path_tracker.config.finish_speed_mps = 0.03f;
+    g_path_tracker.config.dt_s = 0.01f;
+    g_path_tracker.config.normal_pid.kp = 2.0f;
+    g_path_tracker.config.normal_pid.ki = 0.0f;
+    g_path_tracker.config.normal_pid.kd = 0.05f;
+    g_path_tracker.config.normal_pid.integral = 0.0f;
+    g_path_tracker.config.normal_pid.last_error = 0.0f;
+    g_path_tracker.config.normal_pid.output_limit = 0.5f;
+}
+
+void PathTracker_SetPath(const PathPoint *path, uint16_t size)
+{
+    g_path_tracker.path = path;
+    g_path_tracker.size = (path != NULL) ? size : 0U;
+    PathTracker_Reset();
+}
+
+void PathTracker_GetConfig(PathTrackerConfig *config)
+{
+    if (config != NULL)
     {
-        speed = follower->config.cruise_speed_mps;
+        *config = g_path_tracker.config;
     }
-    braking_speed = sqrtf(2.0f * follower->config.maximum_deceleration_mps2
-                          * remaining_distance);
-    speed = PathFollower_Clamp(speed, 0.0f, follower->config.maximum_speed_mps);
-    return fminf(speed, braking_speed);
 }
 
-/* 写入默认参数，默认模式适用于麦克纳姆等全向底盘。 */
-void PathFollower_DefaultConfig(path_follower_config_t *config)
+bool PathTracker_SetConfig(const PathTrackerConfig *config)
 {
-    if (config == NULL)
+    if ((config == NULL) || (config->lookahead_distance_mm < 0.0f)
+        || (config->max_linear_speed_mps <= 0.0f)
+        || (config->max_angular_speed_radps <= 0.0f)
+        || (config->finish_distance_mm <= 0.0f)
+        || (config->finish_speed_mps < 0.0f) || (config->dt_s <= 0.0f))
+    {
+        return false;
+    }
+
+    g_path_tracker.config = *config;
+    g_path_tracker.config.normal_pid.integral = 0.0f;
+    g_path_tracker.config.normal_pid.last_error = 0.0f;
+    return true;
+}
+
+void PathTracker_Reset(void)
+{
+    g_path_tracker.nearest_index = 0U;
+    g_path_tracker.target_index = 0U;
+    g_path_tracker.finished = false;
+    g_path_tracker.config.normal_pid.integral = 0.0f;
+    g_path_tracker.config.normal_pid.last_error = 0.0f;
+}
+
+void PathTracker_Update(float robot_x, float robot_y,
+                        float robot_yaw, float target_yaw,
+                        float *vx_body, float *vy_body, float *omega)
+{
+    const PathPoint *target;
+    const PathPoint *last_point;
+    float tangent_x;
+    float tangent_y;
+    float normal_x;
+    float normal_y;
+    float error_m;
+    float normal_speed;
+    float velocity_world_x;
+    float velocity_world_y;
+    float velocity_norm;
+    float yaw_error;
+    float cosine;
+    float sine;
+    float endpoint_dx;
+    float endpoint_dy;
+    float endpoint_distance_mm;
+
+    PathTracker_WriteZero(vx_body, vy_body, omega);
+    if ((vx_body == NULL) || (vy_body == NULL) || (omega == NULL)
+        || (g_path_tracker.path == NULL) || (g_path_tracker.size == 0U)
+        || g_path_tracker.finished)
     {
         return;
     }
 
-    config->mode = PATH_FOLLOWER_HOLONOMIC;
-    config->minimum_lookahead_m = 0.30f;
-    config->lookahead_time_s = 0.30f;
-    config->cruise_speed_mps = 1.00f;
-    config->maximum_speed_mps = 1.50f;
-    config->maximum_yaw_rate_radps = 3.00f;
-    config->position_gain = 1.50f;
-    config->heading_gain = 3.00f;
-    config->maximum_deceleration_mps2 = 1.00f;
-    config->finish_distance_m = 0.05f;
-    config->finish_yaw_error_rad = 0.10f;
-    config->use_path_yaw = false;
+    last_point = &g_path_tracker.path[g_path_tracker.size - 1U];
+    endpoint_dx = robot_x - last_point->x;
+    endpoint_dy = robot_y - last_point->y;
+    endpoint_distance_mm = sqrtf(endpoint_dx * endpoint_dx + endpoint_dy * endpoint_dy);
+
+    /* 路径终点期望速度应离线规划为零；同时满足位置和速度条件才结束。 */
+    if ((endpoint_distance_mm <= g_path_tracker.config.finish_distance_mm)
+        && (fabsf(last_point->velocity) <= g_path_tracker.config.finish_speed_mps))
+    {
+        g_path_tracker.finished = true;
+        return;
+    }
+
+    g_path_tracker.nearest_index = PathTracker_FindNearestIndex(robot_x, robot_y);
+    g_path_tracker.target_index = PathTracker_FindTargetIndex(g_path_tracker.nearest_index);
+    target = &g_path_tracker.path[g_path_tracker.target_index];
+
+    tangent_x = cosf(target->theta);
+    tangent_y = sinf(target->theta);
+    normal_x = -tangent_y;
+    normal_y = tangent_x;
+
+    /* dx、dy 最初为 mm，此处乘 0.001 转换到 m 供法向 PID 使用。 */
+    error_m = ((robot_x - target->x) * normal_x
+             + (robot_y - target->y) * normal_y) * 0.001f;
+    normal_speed = PathTracker_PIDUpdate(&g_path_tracker.config.normal_pid,
+                                         error_m, g_path_tracker.config.dt_s);
+
+    /* 按要求：法向修正速度为 -normal_speed * normal。 */
+    velocity_world_x = target->velocity * tangent_x - normal_speed * normal_x;
+    velocity_world_y = target->velocity * tangent_y - normal_speed * normal_y;
+
+    /* 合速度超限时等比例缩放，保持世界坐标系速度方向不变。 */
+    velocity_norm = sqrtf(velocity_world_x * velocity_world_x
+                        + velocity_world_y * velocity_world_y);
+    if (velocity_norm > g_path_tracker.config.max_linear_speed_mps)
+    {
+        velocity_world_x *= g_path_tracker.config.max_linear_speed_mps / velocity_norm;
+        velocity_world_y *= g_path_tracker.config.max_linear_speed_mps / velocity_norm;
+    }
+
+    /* 世界系速度旋转到当前车体系。 */
+    cosine = cosf(robot_yaw);
+    sine = sinf(robot_yaw);
+    *vx_body = cosine * velocity_world_x + sine * velocity_world_y;
+    *vy_body = -sine * velocity_world_x + cosine * velocity_world_y;
+
+    /* 固定 target_yaw，与路径 theta 无关。 */
+    yaw_error = PathTracker_NormalizeAngle(target_yaw - robot_yaw);
+    *omega = PathTracker_Clamp(g_path_tracker.config.yaw_kp * yaw_error,
+                               -g_path_tracker.config.max_angular_speed_radps,
+                               g_path_tracker.config.max_angular_speed_radps);
 }
 
-/* 仅保存路径数组地址；调用方在跟踪结束前不得释放或改写该数组。 */
-bool PathFollower_Init(path_follower_t *follower,
-                       const path_follower_point_t *path,
-                       uint16_t point_count,
-                       const path_follower_config_t *config)
+bool PathTracker_IsFinished(void)
 {
-    if ((follower == NULL) || (path == NULL) || (point_count < 2U)
-        || !PathFollower_IsConfigValid(config))
-    {
-        return false;
-    }
-
-    memset(follower, 0, sizeof(*follower));
-    follower->path = path;
-    follower->point_count = point_count;
-    follower->config = *config;
-    follower->initialized = true;
-    return true;
+    return g_path_tracker.finished;
 }
 
-/* 清除路径进度和完成锁存状态，用于重复执行同一路径。 */
-void PathFollower_Reset(path_follower_t *follower)
+uint16_t PathTracker_GetNearestIndex(void)
 {
-    if (follower != NULL)
-    {
-        follower->current_segment = 0U;
-        follower->finished = false;
-    }
+    return g_path_tracker.nearest_index;
 }
 
-/*
- * 跟踪主流程：
- * 1. 在路径上寻找当前位置投影；
- * 2. 沿路径弧长选取动态前视点；
- * 3. 根据位置、切线和航向误差生成车体速度指令。
- */
-bool PathFollower_Step(path_follower_t *follower,
-                       const path_follower_pose_t *pose,
-                       path_follower_output_t *output)
+uint16_t PathTracker_GetTargetIndex(void)
 {
-    path_follower_projection_t projection;
-    path_follower_point_t target;
-    const path_follower_point_t *last_point;
-    float lookahead_distance;
-    float target_speed;
-    float heading;
-    float heading_error;
-    float error_x;
-    float error_y;
-    float velocity_world_x;
-    float velocity_world_y;
-    float speed;
-    float cosine;
-    float sine;
-    float target_body_x;
-    float target_body_y;
-    float target_distance_squared;
-    float target_tangent_x;
-    float target_tangent_y;
-    uint16_t target_segment;
-
-    if ((follower == NULL) || (pose == NULL) || (output == NULL)
-        || !follower->initialized)
-    {
-        return false;
-    }
-
-    memset(output, 0, sizeof(*output));
-    last_point = &follower->path[follower->point_count - 1U];
-    heading_error = PathFollower_NormalizeAngle(last_point->yaw_rad - pose->yaw_rad);
-    /* 到达终点后锁存完成状态，后续调用持续输出零速度。 */
-    if (follower->finished || ((PathFollower_Distance(pose->position_x_m,
-            pose->position_y_m, last_point->position_x_m, last_point->position_y_m)
-            <= follower->config.finish_distance_m)
-            && (!follower->config.use_path_yaw
-                || (fabsf(heading_error) <= follower->config.finish_yaw_error_rad))))
-    {
-        follower->finished = true;
-        output->target_x_m = last_point->position_x_m;
-        output->target_y_m = last_point->position_y_m;
-        output->target_yaw_rad = last_point->yaw_rad;
-        output->finished = true;
-        return true;
-    }
-
-    PathFollower_FindClosestProjection(follower, pose, &projection);
-    follower->current_segment = projection.segment;
-    /* 车速越高前视越远，以减小高速时的转向抖动。 */
-    lookahead_distance = follower->config.minimum_lookahead_m
-                       + fabsf(pose->linear_speed_mps)
-                       * follower->config.lookahead_time_s;
-    PathFollower_FindLookaheadPoint(follower, &projection, lookahead_distance,
-                                    &target, &target_segment);
-    target_speed = PathFollower_TargetSpeed(follower, &target,
-                                             projection.remaining_distance);
-    /* 默认使用前视段切线作为目标航向，也可改为路径点显式给定的 yaw。 */
-    target_tangent_x = follower->path[target_segment + 1U].position_x_m
-                     - follower->path[target_segment].position_x_m;
-    target_tangent_y = follower->path[target_segment + 1U].position_y_m
-                     - follower->path[target_segment].position_y_m;
-    if ((target_tangent_x * target_tangent_x
-         + target_tangent_y * target_tangent_y) < PATH_FOLLOWER_EPSILON)
-    {
-        target_tangent_x = projection.tangent_x;
-        target_tangent_y = projection.tangent_y;
-    }
-    heading = follower->config.use_path_yaw ? target.yaw_rad
-                                             : atan2f(target_tangent_y,
-                                                     target_tangent_x);
-    heading_error = PathFollower_NormalizeAngle(heading - pose->yaw_rad);
-    cosine = cosf(pose->yaw_rad);
-    sine = sinf(pose->yaw_rad);
-    error_x = target.position_x_m - pose->position_x_m;
-    error_y = target.position_y_m - pose->position_y_m;
-
-    output->target_x_m = target.position_x_m;
-    output->target_y_m = target.position_y_m;
-    output->target_yaw_rad = heading;
-    output->target_segment = target_segment;
-    output->cross_track_error_m = projection.tangent_x
-                                * (pose->position_y_m - projection.y)
-                                - projection.tangent_y
-                                * (pose->position_x_m - projection.x);
-
-    if (follower->config.mode == PATH_FOLLOWER_HOLONOMIC)
-    {
-        /* 切线前馈速度叠加位置 P 反馈，再从世界系转换到车体系。 */
-        velocity_world_x = target_speed * projection.tangent_x
-                         + follower->config.position_gain * error_x;
-        velocity_world_y = target_speed * projection.tangent_y
-                         + follower->config.position_gain * error_y;
-        speed = sqrtf(velocity_world_x * velocity_world_x
-                      + velocity_world_y * velocity_world_y);
-        if (speed > follower->config.maximum_speed_mps)
-        {
-            velocity_world_x *= follower->config.maximum_speed_mps / speed;
-            velocity_world_y *= follower->config.maximum_speed_mps / speed;
-        }
-        output->velocity_x_mps = cosine * velocity_world_x + sine * velocity_world_y;
-        output->velocity_y_mps = -sine * velocity_world_x + cosine * velocity_world_y;
-        output->yaw_rate_radps = PathFollower_Clamp(
-            follower->config.heading_gain * heading_error,
-            -follower->config.maximum_yaw_rate_radps,
-            follower->config.maximum_yaw_rate_radps);
-    }
-    else
-    {
-        /* Pure Pursuit 曲率：kappa = 2 * y_l / L^2，角速度为 v * kappa。 */
-        target_body_x = cosine * error_x + sine * error_y;
-        target_body_y = -sine * error_x + cosine * error_y;
-        target_distance_squared = target_body_x * target_body_x
-                                + target_body_y * target_body_y;
-        output->velocity_x_mps = target_speed;
-        output->velocity_y_mps = 0.0f;
-        if (target_distance_squared > PATH_FOLLOWER_EPSILON)
-        {
-            output->yaw_rate_radps = output->velocity_x_mps
-                                   * 2.0f * target_body_y
-                                   / target_distance_squared;
-        }
-        output->yaw_rate_radps += follower->config.heading_gain * heading_error;
-        output->yaw_rate_radps = PathFollower_Clamp(
-            output->yaw_rate_radps, -follower->config.maximum_yaw_rate_radps,
-            follower->config.maximum_yaw_rate_radps);
-    }
-    return true;
+    return g_path_tracker.target_index;
 }

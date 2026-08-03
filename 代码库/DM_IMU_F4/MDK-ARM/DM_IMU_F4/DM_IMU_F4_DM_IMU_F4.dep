@@ -190,7 +190,7 @@ I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ramfunc.h)(0x69D5FFB6
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h)(0x69D5FFB6)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h)(0x69D5FFB6)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h)(0x69D5FFB7)
-F (../user_main/user_main.c)(0x6A6CBDEF)(--c99 -c --cpu Cortex-M4.fp.sp -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../user_main -I ../Drivers/STM32F4xx_HAL_Driver/Inc -I ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_DM_IMU_F4-ID:\keil5ARM\Pack\ARM\CMSIS\5.9.0\CMSIS\Core\Include-D__UVISION_VERSION="537" -D_RTE_ -DSTM32F405xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32F405xx-o dm_imu_f4\user_main.o --omf_browse dm_imu_f4\user_main.crf --depend dm_imu_f4\user_main.d)
+F (../user_main/user_main.c)(0x6A6F4D9D)(--c99 -c --cpu Cortex-M4.fp.sp -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../user_main -I ../Drivers/STM32F4xx_HAL_Driver/Inc -I ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_DM_IMU_F4-ID:\keil5ARM\Pack\ARM\CMSIS\5.9.0\CMSIS\Core\Include-D__UVISION_VERSION="537" -D_RTE_ -DSTM32F405xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32F405xx-o dm_imu_f4\user_main.o --omf_browse dm_imu_f4\user_main.crf --depend dm_imu_f4\user_main.d)
 I (../user_main/user_main.h)(0x6A6CA16C)
 I (D:\keil5ARM\Core\ARM\ARMCC\include\stdbool.h)(0x6025237C)
 I (../user_main/DM_Imu.h)(0x6A6C5F71)
@@ -258,7 +258,7 @@ I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_flash_ramfunc.h)(0x69D5FFB6
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr.h)(0x69D5FFB6)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pwr_ex.h)(0x69D5FFB6)
 I (../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h)(0x69D5FFB7)
-F (../user_main/DM_Imu.c)(0x6A6D8F10)(--c99 -c --cpu Cortex-M4.fp.sp -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../user_main -I ../Drivers/STM32F4xx_HAL_Driver/Inc -I ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_DM_IMU_F4-ID:\keil5ARM\Pack\ARM\CMSIS\5.9.0\CMSIS\Core\Include-D__UVISION_VERSION="537" -D_RTE_ -DSTM32F405xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32F405xx-o dm_imu_f4\dm_imu.o --omf_browse dm_imu_f4\dm_imu.crf --depend dm_imu_f4\dm_imu.d)
+F (../user_main/DM_Imu.c)(0x6A6F4EA5)(--c99 -c --cpu Cortex-M4.fp.sp -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../user_main -I ../Drivers/STM32F4xx_HAL_Driver/Inc -I ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_DM_IMU_F4-ID:\keil5ARM\Pack\ARM\CMSIS\5.9.0\CMSIS\Core\Include-D__UVISION_VERSION="537" -D_RTE_ -DSTM32F405xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32F405xx-o dm_imu_f4\dm_imu.o --omf_browse dm_imu_f4\dm_imu.crf --depend dm_imu_f4\dm_imu.d)
 I (../user_main/DM_Imu.h)(0x6A6C5F71)
 I (D:\keil5ARM\Core\ARM\ARMCC\include\stdbool.h)(0x6025237C)
 I (D:\keil5ARM\Core\ARM\ARMCC\include\stdint.h)(0x6025237E)
