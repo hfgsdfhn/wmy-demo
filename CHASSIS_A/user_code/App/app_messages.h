@@ -40,6 +40,9 @@ typedef struct
     float velocity_x_mps;
     float velocity_y_mps;
     float yaw_rate_radps;
+    float motor_velocity_x_mps;
+    float motor_velocity_y_mps;
+    float motor_yaw_rate_radps;
     uint8_t valid;
 } app_chassis_command_t;    //底盘控制命令结构体，包含序列号、时间戳、x方向速度、y方向速度、偏航角速度和有效性标志
 
