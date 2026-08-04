@@ -52,4 +52,5 @@ chassis_a/freertos.o: ..\Core\Src\freertos.c \
   ..\Drivers\CMSIS\RTOS2\Include\cmsis_os2.h \
   ..\user_code\RTOS\app_rtos.h \
   D:\keil5ARM\Core\ARM\ARMCLANG\Bin\..\include\stdbool.h \
-  ..\user_code\App\app_messages.h ..\user_code\App\app_state.h
+  ..\user_code\App\app_messages.h ..\user_code\App\app_state.h \
+  ..\user_code\Algorithm\path.h

@@ -8,7 +8,7 @@
 /* 轮子半径，单位 mm */
 #define OMNI_CHASSIS_WHEEL_RADIUS_MM      155.0f
 /* 圆周率 */
-#define OMNI_CHASSIS_PI                   3.14159265358979323846f
+#define OMNI_CHASSIS_PI                   3.1415926f
 /* rad/s 转 rpm 的换算系数 */
 #define OMNI_CHASSIS_RPM_PER_RADPS        (60.0f / (2.0f * OMNI_CHASSIS_PI))
 /* rpm 转 rad/s 的换算系数 */

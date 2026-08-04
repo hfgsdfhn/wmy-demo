@@ -22,22 +22,6 @@
 typedef struct
 {
     uint32_t timestamp_ms;
-    float euler_rad[3];
-    float angular_velocity_radps[3];
-    float linear_acceleration_mps2[3];
-    uint8_t valid;
-} app_imu_sample_t;
-
-typedef struct
-{
-    uint32_t timestamp_ms;
-    float distance_m[2];
-    uint8_t valid;
-} app_dt35_sample_t;
-
-typedef struct
-{
-    uint32_t timestamp_ms;
     float position_x_m;
     float position_y_m;
     float yaw_rad;

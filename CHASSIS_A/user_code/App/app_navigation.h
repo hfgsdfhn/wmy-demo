@@ -3,11 +3,11 @@
 
 #include <stdbool.h>
 
-#include "app_messages.h"
+#include "path.h"
 
 bool AppNavigation_Init(void);
-void AppNavigation_Step(const app_trajectory_point_t *point,
+void AppNavigation_Step(const PathPoint *point,
                         bool point_available);
-bool AppNavigation_GetTarget(app_trajectory_point_t *point);
+bool AppNavigation_GetTarget(PathPoint *point);
 
 #endif /* APP_NAVIGATION_H */

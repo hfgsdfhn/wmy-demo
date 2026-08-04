@@ -172,7 +172,7 @@ void Vofa_Process(vofa_t *vofa)
     if ((uint32_t)(now - vofa->last_send_ms) >= vofa->period_ms)
     {
         vofa->last_send_ms = now;
-        (void)Vofa_SendChannels(vofa);
+        Vofa_SendChannels(vofa);
     }
 }
 

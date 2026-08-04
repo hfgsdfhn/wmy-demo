@@ -78,19 +78,20 @@ void AppChassis_ControlStep(const app_chassis_command_t *command,
         OmniChassis_ForwardKinematics(0.0f, 0.0f, 0.0f, &wheel_speeds);
     }
 
-    (void)AkMotor_SetSpeed(&app_chassis_motors[0],
-                           wheel_speeds.left_front_rpm);
-    (void)AkMotor_SetSpeed(&app_chassis_motors[1],
-                           wheel_speeds.right_rear_rpm);
-    (void)AkMotor_SetSpeed(&app_chassis_motors[2],
-                           wheel_speeds.right_front_rpm);
-    (void)AkMotor_SetSpeed(&app_chassis_motors[3],
-                           wheel_speeds.left_rear_rpm);
+    AkMotor_SetSpeed(&app_chassis_motors[0],
+                     wheel_speeds.left_front_rpm);
+    AkMotor_SetSpeed(&app_chassis_motors[1],
+                     wheel_speeds.right_rear_rpm);
+    AkMotor_SetSpeed(&app_chassis_motors[2],
+                     wheel_speeds.right_front_rpm);
+    AkMotor_SetSpeed(&app_chassis_motors[3],
+                     wheel_speeds.left_rear_rpm);
 
     wheel_speeds.left_front_rpm = app_chassis_motors[0].feedback.speed;
     wheel_speeds.right_rear_rpm = app_chassis_motors[1].feedback.speed;
     wheel_speeds.right_front_rpm = app_chassis_motors[2].feedback.speed;
     wheel_speeds.left_rear_rpm = app_chassis_motors[3].feedback.speed;
+
     OmniChassis_InverseKinematics(&wheel_speeds,
                                   &app_chassis_command.motor_velocity_x_mps,
                                   &app_chassis_command.motor_velocity_y_mps,

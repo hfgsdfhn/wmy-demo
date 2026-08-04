@@ -7,5 +7,6 @@ chassis_a/app_init.o: ..\user_code\App\app_init.c \
   ..\user_code\App\app_chassis.h ..\user_code\App\app_climb.h \
   ..\user_code\App\app_communication.h ..\user_code\App\app_monitor.h \
   ..\user_code\App\app_state.h ..\user_code\App\app_navigation.h \
-  ..\user_code\App\app_safety.h ..\user_code\App\app_sensors.h \
-  ..\user_code\Config\board_config.h ..\user_code\BSP\bsp_board.h
+  ..\user_code\Algorithm\path.h ..\user_code\App\app_safety.h \
+  ..\user_code\App\app_sensors.h ..\user_code\Config\board_config.h \
+  ..\user_code\BSP\bsp_board.h

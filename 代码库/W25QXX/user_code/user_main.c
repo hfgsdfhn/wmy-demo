@@ -33,7 +33,7 @@ void init(void)
 {
     g_flash_ready = false;
 
-    if (!Bsp_Uart_Init(&g_uart, &huart1, BSP_UART_TX_BLOCKING,
+    if (!Bsp_Uart_Init(&g_uart, &huart10, BSP_UART_TX_BLOCKING,
                        NULL, 0U, 0U, NULL))
     {
         return;

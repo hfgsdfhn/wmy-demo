@@ -81,7 +81,7 @@
           </BeforeMake>
           <AfterMake>
             <RunUserProg1>0</RunUserProg1>
-            <RunUserProg2>0</RunUserProg2>
+            <RunUserProg2>1</RunUserProg2>
             <UserProg1Name></UserProg1Name>
             <UserProg2Name></UserProg2Name>
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
@@ -519,26 +519,6 @@
               <FileType>1</FileType>
               <FilePath>../user_code/RTOS/app_rtos.c</FilePath>
             </File>
-            <File>
-              <FileName>task_control.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../user_code/RTOS/task_control.c</FilePath>
-            </File>
-            <File>
-              <FileName>task_io.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../user_code/RTOS/task_io.c</FilePath>
-            </File>
-            <File>
-              <FileName>task_navigation.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../user_code/RTOS/task_navigation.c</FilePath>
-            </File>
-            <File>
-              <FileName>task_supervision.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../user_code/RTOS/task_supervision.c</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>
@@ -598,6 +578,11 @@
               <FileName>PathFollower.c</FileName>
               <FileType>1</FileType>
               <FilePath>../user_code/Algorithm/PathFollower.c</FilePath>
+            </File>
+            <File>
+              <FileName>path.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/Algorithm/path.c</FilePath>
             </File>
             <File>
               <FileName>PID.c</FileName>
@@ -775,6 +760,11 @@
           <GroupName>Middlewares/FreeRTOS</GroupName>
           <Files>
             <File>
+              <FileName>port.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c</FilePath>
+            </File>
+            <File>
               <FileName>mpu_wrappers_v2.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Middlewares/Third_Party/FreeRTOS/Source/portable/Common/mpu_wrappers_v2.c</FilePath>
@@ -823,11 +813,6 @@
               <FileName>heap_4.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c</FilePath>
-            </File>
-            <File>
-              <FileName>port.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1/port.c</FilePath>
             </File>
           </Files>
         </Group>

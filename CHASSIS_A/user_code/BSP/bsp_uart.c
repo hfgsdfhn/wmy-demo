@@ -165,5 +165,5 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 
     __HAL_UART_CLEAR_OREFLAG(huart);
     huart->ErrorCode = HAL_UART_ERROR_NONE;
-    (void)Bsp_Uart_StartReceive(uart);
+    Bsp_Uart_StartReceive(uart);
 }

@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "app_state.h"
+#include "app_messages.h"
 
 bool AppSensors_Init(void);
 void AppSensors_UpdateImu(const app_imu_sample_t *sample);

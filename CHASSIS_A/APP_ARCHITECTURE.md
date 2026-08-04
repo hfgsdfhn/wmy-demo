@@ -34,8 +34,9 @@ Config      总线分配、设备 ID、周期、栈和控制参数
 
 | 文件 | 内容 |
 |---|---|
-| `app_messages.h` | CAN 帧、底盘/机构命令、动作、轨迹点和通信数据包 |
-| `app_state.h` | IMU/DT35 样本、机器人状态、运行统计和系统事件位 |
+| `app_messages.h` | CAN 帧、底盘/机构命令、动作、IMU/DT35 原始样本和通信数据包 |
+| `app_state.h` | 融合后的机器人状态、运行统计和系统事件位 |
+| `path.h` | 唯一轨迹点类型 `PathPoint`（`x/y/s` 为 mm，`theta` 为 rad，`curvature` 为 1/m，`velocity` 为 m/s） |
 
 队列容量属于 RTOS 配置，不放入公共数据头文件。
 

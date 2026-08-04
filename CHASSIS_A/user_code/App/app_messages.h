@@ -58,13 +58,19 @@ typedef struct
 
 typedef struct
 {
-    uint32_t sequence;
-    float position_x_m;
-    float position_y_m;
-    float yaw_rad;
-    float target_speed_mps;
-    uint32_t flags;
-} app_trajectory_point_t;   //轨迹点结构体，包含序列号、x位置、y位置、偏航角、目标速度和标志位
+    uint32_t timestamp_ms;
+    float euler_rad[3];
+    float angular_velocity_radps[3];
+    float linear_acceleration_mps2[3];
+    uint8_t valid;
+} app_imu_sample_t;
+
+typedef struct
+{
+    uint32_t timestamp_ms;
+    float distance_m[2];
+    uint8_t valid;
+} app_dt35_sample_t;
 
 typedef struct
 {
