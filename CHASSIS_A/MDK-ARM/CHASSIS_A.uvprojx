@@ -519,6 +519,26 @@
               <FileType>1</FileType>
               <FilePath>../user_code/RTOS/app_rtos.c</FilePath>
             </File>
+            <File>
+              <FileName>app_rtos_queue.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/RTOS/app_rtos_queue.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_rtos_task.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/RTOS/app_rtos_task.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_rtos_event.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/RTOS/app_rtos_event.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_rtos_state.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../user_code/RTOS/app_rtos_state.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
