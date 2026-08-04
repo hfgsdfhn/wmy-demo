@@ -28,6 +28,7 @@ struct bsp_uart
     bsp_uart_tx_mode_t tx_mode;
     uint8_t *rx_buf;
     uint16_t rx_size;
+    volatile uint16_t rx_last_pos;
     volatile uint8_t tx_busy;
     bsp_uart_rx_callback_t rx_callback;
     uint8_t instance_index;

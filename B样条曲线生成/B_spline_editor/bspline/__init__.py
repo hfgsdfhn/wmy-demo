@@ -1,1 +1,0 @@
-"""B-spline calculation package."""

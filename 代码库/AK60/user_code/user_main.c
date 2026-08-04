@@ -9,8 +9,8 @@ static bsp_can_t can1;
 ak_motor_t ak60;
 float speed = 0.0f;
 
-#define AK60_SPEED_STEP_RPM          100.0f
-#define AK60_SPEED_STEP_INTERVAL_MS  10U
+#define AK60_SPEED_STEP_RPM          1000.0f
+#define AK60_SPEED_STEP_INTERVAL_MS  2U
 
 static void can1_callback(bsp_can_t *can, uint32_t can_id,
                           const uint8_t *data, uint8_t length)
@@ -32,7 +32,7 @@ void Init(void)
     {
         return;
     }
-    AkMotor_Init(&ak60, &can1, 2U);
+    AkMotor_Init(&ak60, &can1, 4U);
 }
 
 void Loop(void)
@@ -42,5 +42,4 @@ void Loop(void)
         AkMotor_SetSpeedStep(&ak60, speed, AK60_SPEED_STEP_RPM,
                              AK60_SPEED_STEP_INTERVAL_MS);
     }
-    HAL_Delay(2);
 }

@@ -34,4 +34,4 @@ sick_dt35\user_main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
 sick_dt35\user_main.o: ../user_code/bsp_uart.h
 sick_dt35\user_main.o: ../Core/Inc/i2c.h
 sick_dt35\user_main.o: ../Core/Inc/usart.h
-sick_dt35\user_main.o: ../user_code/VOFA.h
+sick_dt35\user_main.o: D:\keil5ARM\Core\ARM\ARMCC\Bin\..\include\string.h

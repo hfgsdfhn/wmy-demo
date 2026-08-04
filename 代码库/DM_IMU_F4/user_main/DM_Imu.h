@@ -18,4 +18,16 @@ float DM_IMU_GetYaw(void);
 
 float DM_IMU_GetGyroZ(void);
 
+float DM_IMU_GetAccelX(void);
+
+float DM_IMU_GetAccelY(void);
+
+float DM_IMU_GetVelocityX(void);
+
+float DM_IMU_GetVelocityY(void);
+
+float DM_IMU_GetPositionX(void);
+
+float DM_IMU_GetPositionY(void);
+
 #endif /* DM_IMU_H */
