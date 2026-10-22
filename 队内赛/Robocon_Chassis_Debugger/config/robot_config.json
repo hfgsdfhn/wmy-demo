@@ -1,0 +1,10 @@
+{
+  "field_width_m": 11.0,
+  "field_height_m": 6.0,
+  "robot_length": 0.7,
+  "robot_width": 0.7,
+  "safe_margin": 0.0,
+  "serial_baudrate": 921600,
+  "state_refresh_hz": 50,
+  "obstacles": []
+}

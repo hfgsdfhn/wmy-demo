@@ -1,0 +1,23 @@
+--cpu=Cortex-M4.fp.sp
+"f405rgt6\startup_stm32f405xx.o"
+"f405rgt6\main.o"
+"f405rgt6\stm32f4xx_it.o"
+"f405rgt6\stm32f4xx_hal_msp.o"
+"f405rgt6\stm32f4xx_hal_rcc.o"
+"f405rgt6\stm32f4xx_hal_rcc_ex.o"
+"f405rgt6\stm32f4xx_hal_flash.o"
+"f405rgt6\stm32f4xx_hal_flash_ex.o"
+"f405rgt6\stm32f4xx_hal_flash_ramfunc.o"
+"f405rgt6\stm32f4xx_hal_gpio.o"
+"f405rgt6\stm32f4xx_hal_dma_ex.o"
+"f405rgt6\stm32f4xx_hal_dma.o"
+"f405rgt6\stm32f4xx_hal_pwr.o"
+"f405rgt6\stm32f4xx_hal_pwr_ex.o"
+"f405rgt6\stm32f4xx_hal_cortex.o"
+"f405rgt6\stm32f4xx_hal.o"
+"f405rgt6\stm32f4xx_hal_exti.o"
+"f405rgt6\system_stm32f4xx.o"
+--strict --scatter "F405RGT6\F405RGT6.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list "F405RGT6.map" -o F405RGT6\F405RGT6.axf
