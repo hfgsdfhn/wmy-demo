@@ -1,6 +1,7 @@
 """Robocon B-spline path editor entry point."""
 from __future__ import annotations
 
+import math
 import sys
 from pathlib import Path
 
@@ -19,6 +20,7 @@ from config.defaults import (
     FIELD_IMAGE_CROP,
     FIELD_IMAGE_PATH,
     FIELD_WIDTH_MM,
+    FORWARD_AXIS_ANGLE,
 )
 from config.path_config import (
     CONFIG_FORMAT,
@@ -29,16 +31,20 @@ from config.path_config import (
     save_path_config,
 )
 from config.coordinate_system import CoordinateSystem, DIRECTIONS
-from path.exporter import export_c_array
-from path.path_generator import PathPoint, generate_path
-
+from path.exporter import export_c_array, export_mpc_c_array, export_mpc_csv
+from path.mpc_generator import (
+    DEFAULT_SAMPLE_TIME,
+    MAX_SAMPLE_TIME,
+    MIN_SAMPLE_TIME,
+    generate_mpc_states,
+)
+from path.path_generator import PathPoint, generate_path, yaw_from_heading
 
 class CentimeterAxis(pg.AxisItem):
     """Display the millimetre world coordinates as centimetres on plot axes."""
 
     def tickStrings(self, values, scale, spacing):
         return [f"{value / 10.0:g}" for value in values]
-
 
 class PathViewBox(pg.ViewBox):
     """ViewBox which turns mouse actions into control point edits."""
@@ -132,6 +138,7 @@ class PathEditor(QtWidgets.QMainWindow):
         self.control_points: list[tuple[float, float]] = []
         self.path_points = []
         self.path_plot_points = []
+        self.mpc_states = []
         self.background_item = None
         self._build_ui()
         self._update_plot()
@@ -149,8 +156,9 @@ class PathEditor(QtWidgets.QMainWindow):
         layout.setContentsMargins(8, 8, 8, 8)
 
         controls = QtWidgets.QWidget()
-        controls.setFixedWidth(295)
+        controls.setFixedWidth(310)
         control_layout = QtWidgets.QVBoxLayout(controls)
+        control_layout.setContentsMargins(0, 0, 0, 0)
 
         image_group = QtWidgets.QGroupBox("场地设置")
         image_form = QtWidgets.QFormLayout(image_group)
@@ -233,6 +241,38 @@ class PathEditor(QtWidgets.QMainWindow):
         speed_form.addRow("起步加速度", self.acceleration_spin)
         speed_form.addRow("刹车减速度", self.deceleration_spin)
 
+        mpc_group = QtWidgets.QGroupBox("MPC 状态量 (按时间采样)")
+        mpc_layout = QtWidgets.QVBoxLayout(mpc_group)
+        mpc_form = QtWidgets.QFormLayout()
+        self.mpc_sample_spin = QtWidgets.QDoubleSpinBox()
+        self.mpc_sample_spin.setRange(MIN_SAMPLE_TIME, MAX_SAMPLE_TIME)
+        self.mpc_sample_spin.setDecimals(3)
+        self.mpc_sample_spin.setSingleStep(0.005)
+        self.mpc_sample_spin.setValue(DEFAULT_SAMPLE_TIME)
+        self.mpc_sample_spin.setSuffix(" s")
+        self.mpc_sample_spin.setToolTip(
+            "MPC 参考轨迹的固定采样周期，默认 0.01 s；相邻状态的时间间隔"
+        )
+        self.mpc_sample_spin.valueChanged.connect(self._update_path)
+        mpc_form.addRow("采样周期 dt", self.mpc_sample_spin)
+        mpc_layout.addLayout(mpc_form)
+        self.mpc_info_label = QtWidgets.QLabel("状态数: 0（至少需要 4 个控制点）")
+        self.mpc_info_label.setWordWrap(True)
+        self.mpc_show_check = QtWidgets.QCheckBox("在图中显示时间采样点")
+        self.mpc_show_check.setChecked(True)
+        self.mpc_show_check.toggled.connect(self._set_mpc_points_visible)
+        self.mpc_copy_button = QtWidgets.QPushButton("复制 MPC 数组")
+        self.mpc_header_button = QtWidgets.QPushButton("导出 MPC .h")
+        self.mpc_csv_button = QtWidgets.QPushButton("导出 MPC .csv")
+        self.mpc_copy_button.clicked.connect(self.copy_mpc_array)
+        self.mpc_header_button.clicked.connect(self.save_mpc_header)
+        self.mpc_csv_button.clicked.connect(self.save_mpc_csv)
+        mpc_layout.addWidget(self.mpc_info_label)
+        mpc_layout.addWidget(self.mpc_show_check)
+        mpc_layout.addWidget(self.mpc_copy_button)
+        mpc_layout.addWidget(self.mpc_header_button)
+        mpc_layout.addWidget(self.mpc_csv_button)
+
         list_group = QtWidgets.QGroupBox("控制点 (机器人坐标 mm)")
         list_layout = QtWidgets.QVBoxLayout(list_group)
         self.point_list = QtWidgets.QTableWidget(0, 3)
@@ -270,6 +310,7 @@ class PathEditor(QtWidgets.QMainWindow):
         control_layout.addWidget(coordinate_group)
         control_layout.addWidget(path_group)
         control_layout.addWidget(speed_group)
+        control_layout.addWidget(mpc_group)
         control_layout.addWidget(list_group, 1)
         control_layout.addWidget(export_group)
         control_layout.addWidget(self.status_label)
@@ -287,6 +328,11 @@ class PathEditor(QtWidgets.QMainWindow):
         self.plot.setLabel("left", "机器人 Y", units="cm")
         self.plot.addLegend(offset=(10, 10))
         self.curve_item = self.plot.plot([], [], pen=pg.mkPen("#1368ce", width=3), name="三阶 B 样条")
+        self.mpc_item = pg.ScatterPlotItem(
+            size=6, pen=None, brush=pg.mkBrush("#e67e22"), name="MPC 采样点"
+        )
+        self.mpc_item.setZValue(2)
+        self.plot.addItem(self.mpc_item)
         self.control_item = pg.ScatterPlotItem(
             size=14, pen=pg.mkPen("#7a1f1f", width=1), brush=pg.mkBrush("#e74c3c"), name="控制点"
         )
@@ -306,7 +352,13 @@ class PathEditor(QtWidgets.QMainWindow):
         self.origin_item.setData([0.0], [0.0])
         self.origin_item.setZValue(10)
         self.plot.addItem(self.origin_item)
-        layout.addWidget(controls)
+        control_panel = QtWidgets.QScrollArea()
+        control_panel.setWidgetResizable(True)
+        control_panel.setWidget(controls)
+        control_panel.setFixedWidth(328)
+        control_panel.setFrameShape(QtWidgets.QFrame.NoFrame)
+        control_panel.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        layout.addWidget(control_panel)
         layout.addWidget(self.plot, 1)
         self._update_sampling_controls()
 
@@ -329,6 +381,17 @@ class PathEditor(QtWidgets.QMainWindow):
         spin.setDecimals(2)
         spin.setSuffix(suffix)
         return spin
+
+    @staticmethod
+    def _combo_index(combo, value):
+        """Find a combo entry by data, including tuples that findData misses."""
+        index = combo.findData(value)
+        if index >= 0:
+            return index
+        for candidate in range(combo.count()):
+            if combo.itemData(candidate) == value:
+                return candidate
+        return -1
 
     def _set_field_size(self):
         old_width, old_height = self.field_width, self.field_height
@@ -382,8 +445,12 @@ class PathEditor(QtWidgets.QMainWindow):
     def _coordinate_system_changed(self):
         if not hasattr(self, "origin_combo"):
             return
-        x_direction, y_direction = self.direction_combo.currentData()
-        new_system = CoordinateSystem(self.origin_combo.currentData(), x_direction, y_direction, (0.0, 0.0))
+        origin = self.origin_combo.currentData()
+        direction = self.direction_combo.currentData()
+        if origin is None or direction is None:
+            return
+        x_direction, y_direction = direction
+        new_system = CoordinateSystem(origin, x_direction, y_direction, (0.0, 0.0))
         field_points = [
             self.coordinate_system.to_field(point, self.field_width, self.field_height)
             for point in self.control_points
@@ -538,7 +605,10 @@ class PathEditor(QtWidgets.QMainWindow):
                 PathPoint(
                     sx * point.x,
                     sy * point.y,
-                    self.coordinate_system.transform_angle(point.theta),
+                    yaw_from_heading(
+                        self.coordinate_system.transform_angle(point.theta),
+                        FORWARD_AXIS_ANGLE,
+                    ),
                     self.coordinate_system.transform_curvature(point.curvature),
                     point.s,
                     point.velocity,
@@ -548,7 +618,45 @@ class PathEditor(QtWidgets.QMainWindow):
         else:
             self.path_points = []
             self.path_plot_points = []
+        self._update_mpc_states()
         self._update_plot(update_path=False)
+
+    def _update_mpc_states(self):
+        """Rebuild the time-sampled reference states used by the MPC."""
+        self.mpc_states = []
+        if not self.path_points:
+            self.mpc_info_label.setStyleSheet("")
+            self.mpc_info_label.setText("状态数: 0（至少需要 4 个控制点）")
+            return
+        try:
+            self.mpc_states = generate_mpc_states(
+                self.path_points, sample_time=self.mpc_sample_spin.value()
+            )
+        except ValueError as error:
+            self.mpc_info_label.setStyleSheet("color: #c0392b;")
+            self.mpc_info_label.setText(f"无法生成 MPC 状态：{error}")
+            return
+        self.mpc_info_label.setStyleSheet("")
+        duration = self.mpc_states[-1].time
+        self.mpc_info_label.setText(
+            f"状态数: {len(self.mpc_states)}，总时长: {duration:.2f} s"
+        )
+
+    def _update_mpc_points(self):
+        """Show the time-sampled reference as dots, decimated for display speed."""
+        if not self.mpc_show_check.isChecked() or not self.mpc_states:
+            self.mpc_item.setData([], [])
+            return
+        stride = max(1, math.ceil(len(self.mpc_states) / 2000))
+        sx, sy = self.coordinate_system.signs
+        samples = self.mpc_states[::stride]
+        self.mpc_item.setData(
+            [sx * state.x for state in samples],
+            [sy * state.y for state in samples],
+        )
+
+    def _set_mpc_points_visible(self, _checked):
+        self._update_mpc_points()
 
     def _update_plot(self, update_path=True):
         if update_path:
@@ -565,6 +673,7 @@ class PathEditor(QtWidgets.QMainWindow):
             self.curve_item.setData([p.x for p in self.path_plot_points], [p.y for p in self.path_plot_points])
         else:
             self.curve_item.setData([], [])
+        self._update_mpc_points()
         # Allow the view to extend above the field while preserving its aspect ratio.
         self.plot.setLimits(
             xMin=self._display_bounds()[0], xMax=self._display_bounds()[1],
@@ -684,6 +793,7 @@ class PathEditor(QtWidgets.QMainWindow):
                 "acceleration": self.acceleration_spin.value(),
                 "deceleration": self.deceleration_spin.value(),
             },
+            "mpc": {"sample_time": self.mpc_sample_spin.value()},
             "coordinate_system": {
                 "origin": self.coordinate_system.origin,
                 "origin_offset_mm": list(self.coordinate_system.origin_offset),
@@ -729,12 +839,14 @@ class PathEditor(QtWidgets.QMainWindow):
         widgets = (
             self.width_spin, self.height_spin, self.sample_mode, self.interval_spin,
             self.count_spin, self.lateral_accel_spin, self.speed_scale_spin,
-            self.acceleration_spin, self.deceleration_spin,
+            self.acceleration_spin, self.deceleration_spin, self.mpc_sample_spin,
+            self.origin_combo, self.direction_combo,
         )
         blockers = [QtCore.QSignalBlocker(widget) for widget in widgets]
         field = config["field"]
         sampling = config["sampling"]
         speed = config["speed"]
+        mpc = config["mpc"]
         self.width_spin.setValue(field["width_mm"])
         self.height_spin.setValue(field["height_mm"])
         self.sample_mode.setCurrentIndex(self.sample_mode.findData(sampling["mode"]))
@@ -744,11 +856,15 @@ class PathEditor(QtWidgets.QMainWindow):
         self.speed_scale_spin.setValue(speed["speed_scale"])
         self.acceleration_spin.setValue(speed["acceleration"])
         self.deceleration_spin.setValue(speed["deceleration"])
+        self.mpc_sample_spin.setValue(mpc["sample_time"])
         coordinate_system = config["coordinate_system"]
-        self.origin_combo.setCurrentIndex(self.origin_combo.findData(coordinate_system["origin"]))
+        self.origin_combo.setCurrentIndex(
+            self._combo_index(self.origin_combo, coordinate_system["origin"])
+        )
         self.direction_combo.setCurrentIndex(
-            self.direction_combo.findData(
-                (coordinate_system["x_direction"], coordinate_system["y_direction"])
+            self._combo_index(
+                self.direction_combo,
+                (coordinate_system["x_direction"], coordinate_system["y_direction"]),
             )
         )
         del blockers
@@ -780,6 +896,45 @@ class PathEditor(QtWidgets.QMainWindow):
         if filename:
             Path(filename).write_text(self._c_source(), encoding="utf-8")
             self.status_label.setText(f"已导出: {filename}")
+
+    def copy_mpc_array(self):
+        if not self.mpc_states:
+            self.status_label.setText("没有可导出的 MPC 状态，请先检查控制点和速度规划。")
+            return
+        QtWidgets.QApplication.clipboard().setText(
+            export_mpc_c_array(self.mpc_states, self.mpc_sample_spin.value())
+        )
+        self.status_label.setText(
+            f"MPC 数组已复制到剪贴板（{len(self.mpc_states)} 个状态，"
+            f"dt={self.mpc_sample_spin.value():g} s）。"
+        )
+
+    def save_mpc_header(self):
+        if not self.mpc_states:
+            self.status_label.setText("没有可导出的 MPC 状态，请先检查控制点和速度规划。")
+            return
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, "导出 MPC 状态头文件", "mpc_reference.h", "C Header (*.h)"
+        )
+        if not filename:
+            return
+        Path(filename).write_text(
+            export_mpc_c_array(self.mpc_states, self.mpc_sample_spin.value()),
+            encoding="utf-8",
+        )
+        self.status_label.setText(f"已导出 MPC 状态: {filename}")
+
+    def save_mpc_csv(self):
+        if not self.mpc_states:
+            self.status_label.setText("没有可导出的 MPC 状态，请先检查控制点和速度规划。")
+            return
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, "导出 MPC 状态 CSV", "mpc_reference.csv", "CSV (*.csv)"
+        )
+        if not filename:
+            return
+        Path(filename).write_text(export_mpc_csv(self.mpc_states), encoding="utf-8")
+        self.status_label.setText(f"已导出 MPC 状态: {filename}")
 
 
 def main():

@@ -1,0 +1,69 @@
+{
+  "format": "robocon-bspline-path",
+  "version": 3,
+  "control_points": [
+    [
+      363.7892376681614,
+      322.6831091180875
+    ],
+    [
+      404.8953662182361,
+      2819.880418535132
+    ],
+    [
+      492.2458893871449,
+      4766.846505979076
+    ],
+    [
+      456.27802690582956,
+      6277.9334828101655
+    ],
+    [
+      481.9693572496263,
+      7490.56427503737
+    ],
+    [
+      435.72496263079216,
+      8769.992526158447
+    ],
+    [
+      1345.198056801196,
+      9288.95739910314
+    ],
+    [
+      1982.3430493273543,
+      8728.88639760837
+    ],
+    [
+      1987.4813153961136,
+      8358.9312406577
+    ]
+  ],
+  "field": {
+    "width_mm": 11000.0,
+    "height_mm": 11000.0
+  },
+  "sampling": {
+    "mode": "interval",
+    "interval_mm": 50.0,
+    "count": 200
+  },
+  "speed": {
+    "lateral_acceleration": 2.0,
+    "speed_scale": 1.0,
+    "acceleration": 1.0,
+    "deceleration": 1.0
+  },
+  "mpc": {
+    "sample_time": 0.01
+  },
+  "coordinate_system": {
+    "origin": "bottom_left",
+    "origin_offset_mm": [
+      0.0,
+      0.0
+    ],
+    "x_direction": "positive_right",
+    "y_direction": "positive_up"
+  }
+}

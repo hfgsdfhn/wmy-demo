@@ -14,6 +14,7 @@ def sample_config():
             "sampling": {"mode": "interval", "interval_mm": 50.0, "count": 200},
             "speed": {"lateral_acceleration": 2.0, "speed_scale": 1.0,
                       "acceleration": 1.0, "deceleration": 1.0},
+            "mpc": {"sample_time": 0.01},
             "coordinate_system": {"origin": "bottom_left", "origin_offset_mm": [0.0, 0.0],
                                    "x_direction": "positive_right",
                                    "y_direction": "positive_up"}}
@@ -59,6 +60,23 @@ class PathConfigTests(unittest.TestCase):
         self.assertEqual(loaded["version"], CONFIG_VERSION)
         self.assertEqual(loaded["coordinate_system"]["origin"], "bottom_left")
         self.assertEqual(loaded["coordinate_system"]["origin_offset_mm"], [0.0, 0.0])
+
+    def test_version_two_defaults_to_ten_millisecond_mpc_period(self):
+        config = sample_config()
+        config.pop("mpc")
+        config["version"] = 2
+        with tempfile.TemporaryDirectory() as directory:
+            filename = Path(directory) / "old.json"
+            filename.write_text(json.dumps(config), encoding="utf-8")
+            loaded = load_path_config(filename)
+        self.assertEqual(loaded["mpc"]["sample_time"], 0.01)
+        self.assertEqual(loaded["version"], CONFIG_VERSION)
+
+    def test_rejects_mpc_period_outside_supported_range(self):
+        config = sample_config()
+        config["mpc"]["sample_time"] = 0.0001
+        with self.assertRaises(PathConfigError):
+            save_path_config(Path("unused.json"), config)
 
     def test_coordinate_system_round_trip_and_inverse(self):
         system = CoordinateSystem("top_right", "positive_left", "positive_down")

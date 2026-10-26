@@ -16,6 +16,18 @@ class PathPoint:
     velocity: float
 
 
+def yaw_from_heading(heading: float, forward_axis_angle: float) -> float:
+    """Convert a tangent heading into robot yaw with forward as zero.
+
+    ``heading`` is the path tangent in the robot frame measured from +X, as
+    produced by :func:`generate_path` after the coordinate transform.
+    ``forward_axis_angle`` is the angle of the robot's forward axis in the
+    same frame (``pi / 2`` for +Y).  The result is wrapped to ``[-pi, pi]``.
+    """
+    yaw = heading - forward_axis_angle
+    return math.atan2(math.sin(yaw), math.cos(yaw))
+
+
 def generate_path(
     points: np.ndarray,
     lateral_acceleration: float = 2.0,
@@ -26,10 +38,12 @@ def generate_path(
 ) -> list[PathPoint]:
     """Calculate geometry and a speed profile for a sampled path.
 
-    Coordinates and ``s`` are millimetres. Theta is radians, counterclockwise
-    from +X; curvature is 1/m; velocity is m/s.  ``lateral_acceleration`` is
-    used only for curvature speed limiting.  Acceleration and deceleration
-    shape the start and stop speed envelope along the path distance.
+    Coordinates and ``s`` are millimetres. ``theta`` is the tangent heading in
+    radians, counterclockwise from +X; use :func:`yaw_from_heading` when the
+    robot's forward axis is not +X. Curvature is 1/m; velocity is m/s.
+    ``lateral_acceleration`` is used only for curvature speed limiting.
+    Acceleration and deceleration shape the start and stop speed envelope
+    along the path distance.
     """
     _validate_profile_inputs(
         lateral_acceleration, max_speed, speed_scale, acceleration, deceleration

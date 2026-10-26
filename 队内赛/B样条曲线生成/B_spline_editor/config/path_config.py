@@ -6,10 +6,11 @@ import math
 from pathlib import Path
 
 from .coordinate_system import CoordinateSystem, ORIGINS, DIRECTIONS
+from path.mpc_generator import DEFAULT_SAMPLE_TIME, MAX_SAMPLE_TIME, MIN_SAMPLE_TIME
 
 
 CONFIG_FORMAT = "robocon-bspline-path"
-CONFIG_VERSION = 2
+CONFIG_VERSION = 3
 DEFAULT_CONFIG_DIRECTORY = Path(__file__).resolve().parents[1] / "saved_paths"
 
 
@@ -41,7 +42,7 @@ def validate_path_config(data: object) -> dict:
     if root.get("format") != CONFIG_FORMAT:
         raise PathConfigError("不是本编辑器生成的路径配置文件")
     version = root.get("version")
-    if version not in (1, CONFIG_VERSION):
+    if version not in (1, 2, CONFIG_VERSION):
         raise PathConfigError("不支持的配置文件版本")
     field = _mapping(root.get("field"), "field")
     width = _number(field.get("width_mm"), "field.width_mm", 100.0, 100000.0)
@@ -57,6 +58,13 @@ def validate_path_config(data: object) -> dict:
     speed_scale = _number(speed.get("speed_scale"), "speed.speed_scale", 0.0, 1.0)
     acceleration = _number(speed.get("acceleration"), "speed.acceleration", 0.01, 100.0)
     deceleration = _number(speed.get("deceleration"), "speed.deceleration", 0.01, 100.0)
+    mpc = _mapping(root.get("mpc", {}), "mpc")
+    sample_time = _number(
+        mpc.get("sample_time", DEFAULT_SAMPLE_TIME),
+        "mpc.sample_time",
+        MIN_SAMPLE_TIME,
+        MAX_SAMPLE_TIME,
+    )
     raw_points = root.get("control_points")
     if not isinstance(raw_points, list):
         raise PathConfigError("control_points 必须是数组")
@@ -93,6 +101,7 @@ def validate_path_config(data: object) -> dict:
         "sampling": {"mode": mode, "interval_mm": interval, "count": count},
         "speed": {"lateral_acceleration": lateral_acceleration, "speed_scale": speed_scale,
                   "acceleration": acceleration, "deceleration": deceleration},
+        "mpc": {"sample_time": sample_time},
         "coordinate_system": {
             "origin": origin, "origin_offset_mm": [offset_x, offset_y],
             "x_direction": x_direction, "y_direction": y_direction,

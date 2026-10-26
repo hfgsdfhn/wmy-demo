@@ -1,10 +1,15 @@
 """Default field data for the Upre 2026 internal Robocon competition."""
+import math
 from pathlib import Path
 
 
 # 规则书规定棕色围栏内部的比赛场地为 11000 mm x 11000 mm。
 FIELD_WIDTH_MM = 11000.0
 FIELD_HEIGHT_MM = 11000.0
+
+# 机器人正前方为 +Y 轴。导出的 theta 是 yaw：
+# 正前方为 0，逆时针为正。若以后改为 +X 为正前方，把该值改成 0.0 即可。
+FORWARD_AXIS_ANGLE = math.pi / 2.0
 
 # The supplied field image is kept beside the application directory.
 FIELD_IMAGE_PATH = Path(__file__).resolve().parents[1] / "field_default.png"
